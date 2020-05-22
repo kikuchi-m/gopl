@@ -23,8 +23,8 @@ func main() {
 	}
 
 	for l, nameCount := range lines {
-		if Total(nameCount) > 1 {
-			fmt.Printf("%s\t%v\n", l, UniqNames(nameCount))
+		if totalLines(nameCount) > 1 {
+			fmt.Printf("%s\t%v\n", l, extractNemes(nameCount))
 		}
 	}
 }
@@ -36,16 +36,11 @@ func CollectDups(f *os.File, name string, lines map[string]map[string]int) {
 		if lines[t] == nil {
 			lines[t] = make(map[string]int)
 		}
-		// when stdin, breaks if same line appeared
-		// if _, exists := lines[t][name]; exists {
-		// 	break
-		// }
 		lines[t][name]++
 	}
-	// ignore error of input.Error()
 }
 
-func Total(nameCount map[string]int) int {
+func totalLines(nameCount map[string]int) int {
 	total := 0
 	for _, c := range nameCount {
 		total += c
@@ -53,7 +48,7 @@ func Total(nameCount map[string]int) int {
 	return total
 }
 
-func UniqNames(names map[string]int) []string {
+func extractNemes(names map[string]int) []string {
 	var res []string
 	for n, _ := range names {
 		res = append(res, n)
