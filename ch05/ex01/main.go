@@ -10,7 +10,7 @@ import (
 func main() {
 	doc, err := html.Parse(os.Stdin)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "findlinks1: %v\n", err)
+		fmt.Fprintf(os.Stderr, "find links: %v\n", err)
 		os.Exit(1)
 	}
 	for _, link := range visit(nil, doc) {
