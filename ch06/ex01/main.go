@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"math/bits"
 	"os"
 	"strconv"
 )
@@ -42,22 +43,24 @@ type IntSet struct {
 	words []uint64
 }
 
-// beg: ch06
+// beg: ex01
 func (s *IntSet) Len() int {
-	return len(s.words)
+	l := 0
+	for _, w := range s.words {
+		l += bits.OnesCount64(w)
+	}
+	return l
 }
 
 func (s *IntSet) Remove(x int) {
 	if s.Has(x) {
 		word, bit := wordAndBit(x)
-		s.words[word] = s.words[word] ^ (1 << bit)
+		s.words[word] &= ^(1 << bit)
 	}
 }
 
 func (s *IntSet) Clear() {
-	for i, _ := range s.words {
-		s.words[i] = 0
-	}
+	s.words = nil
 }
 
 func (s *IntSet) Copy() *IntSet {
@@ -73,7 +76,7 @@ func wordAndBit(x int) (int, uint) {
 	return x / 64, uint(x % 64)
 }
 
-// end: ch06
+// end: ex01
 
 func (s *IntSet) Has(x int) bool {
 	word, bit := wordAndBit(x)
