@@ -8,4 +8,9 @@
     'get-gore': [
         command('go get -u github.com/motemen/gore/cmd/gore'),
     ],
+
+    # gopl programs
+    'get-gopl': [
+        command('go get gopl.io/ch5/links'),
+    ],
 }
