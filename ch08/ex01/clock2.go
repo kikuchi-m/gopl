@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	port := flag.Int("port", 8000, "port")
+	port := flag.Uint("port", 8000, "port")
 	flag.Parse()
 	listener, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", *port))
 	if err != nil {
