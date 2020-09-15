@@ -25,32 +25,45 @@ func main() {
 	}
 }
 
+type cliChan chan<- string
+type cliName string
 type client struct {
-	who     string
-	message chan<- string
+	name cliName
+	ch   cliChan
 }
 
 var (
-	entering = make(chan *client)
-	leaving  = make(chan *client)
+	entering = make(chan client)
+	leaving  = make(chan client)
 	messages = make(chan string)
-	clients  = make(map[*client]bool)
 )
 
 func broadcaster() {
+	clients := make(map[cliName]cliChan)
 	for {
 		select {
 		case msg := <-messages:
 			for cli := range clients {
-				cli.message <- msg
+				clients[cli] <- msg
 			}
 
 		case cli := <-entering:
-			clients[cli] = true
+			var sb strings.Builder
+			if len(clients) > 0 {
+				fmt.Fprint(&sb, "current clients in the room:")
+				for c := range clients {
+					fmt.Fprintf(&sb, "\n\t%s", c)
+				}
+			} else {
+				fmt.Fprint(&sb, "no one in the room")
+			}
+			cli.ch <- sb.String()
+			clients[cli.name] = cli.ch
 
 		case cli := <-leaving:
-			delete(clients, cli)
-			close(cli.message)
+			ch := cli.ch
+			delete(clients, cli.name)
+			close(ch)
 		}
 	}
 }
@@ -61,19 +74,9 @@ func handleConn(conn net.Conn) {
 
 	who := conn.RemoteAddr().String()
 	ch <- "You are " + who
-	var sb strings.Builder
-	if len(clients) > 0 {
-		fmt.Fprint(&sb, "current clients in the room:")
-		for c := range clients {
-			fmt.Fprintf(&sb, "\n\t%s", c.who)
-		}
-	} else {
-		fmt.Fprint(&sb, "no one in the room")
-	}
-	ch <- sb.String()
 	messages <- who + " has arrived"
-	cli := client{who, ch}
-	entering <- &cli
+	cli := client{cliName(who), ch}
+	entering <- cli
 
 	input := bufio.NewScanner(conn)
 	for input.Scan() {
@@ -81,7 +84,7 @@ func handleConn(conn net.Conn) {
 	}
 	// NOTE: ignoring potential errors from input.Err()
 
-	leaving <- &cli
+	leaving <- cli
 	messages <- who + " has left"
 	conn.Close()
 }
