@@ -18,6 +18,7 @@ type rootDir struct {
 }
 
 var vFlag = flag.Bool("v", false, "show verbose progress messages")
+var onErr = make(chan error)
 
 func main() {
 	flag.Parse()
@@ -54,25 +55,27 @@ func main() {
 		for _, root := range roots {
 			close(root.size)
 		}
+		if *vFlag {
+			fmt.Printf("\033[%dB", len(roots))
+		}
 		close(done)
 	}()
 
+	var tick <-chan time.Time
 	if *vFlag {
-		fmt.Printf("%s", strings.Repeat("\n", len(roots)))
-		printForEach(roots)
-		var tick <-chan time.Time
 		tick = time.Tick(500 * time.Millisecond)
-	loop:
-		for {
-			select {
-			case <-done:
-				break loop
-			case <-tick:
-				printForEach(roots)
-			}
+	}
+
+loop:
+	for {
+		select {
+		case <-done:
+			break loop
+		case <-tick:
+			printForEach(roots)
+		case m := <-onErr:
+			fmt.Fprintf(os.Stderr, "\033[Kdu: %v\n", m)
 		}
-	} else {
-		<-done
 	}
 
 	printTotal(roots)
@@ -91,9 +94,9 @@ func printForEach(roots []*rootDir) {
 	n := len(roots)
 	var sb strings.Builder
 	for _, r := range roots {
-		fmt.Fprintf(&sb, "\033[K%s: %.3f MB (%d files)\n", r.path, float64(r.nByes)/1e6, r.nFiles)
+		fmt.Fprintf(&sb, "%s: %.3f MB (%d files)\n", r.path, float64(r.nByes)/1e6, r.nFiles)
 	}
-	fmt.Printf("\033[%dA%s", n, sb.String())
+	fmt.Printf("%s\033[%dA", sb.String(), n)
 }
 
 func walkDir(dir string, n *sync.WaitGroup, fileSizes chan<- int64) {
@@ -117,7 +120,7 @@ func dirents(dir string) []os.FileInfo {
 
 	entries, err := ioutil.ReadDir(dir)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "du: %v\n", err)
+		onErr <- err
 		return nil
 	}
 	return entries
