@@ -38,19 +38,7 @@ func handleConn(c net.Conn) {
 		}(input.Text())
 	}
 
-	ch := make(chan struct{})
-	go func() {
-		wg.Wait()
-		switch c := c.(type) {
-		case *net.TCPConn:
-			c.CloseWrite()
-		default:
-			log.Println("not net.TCPConn")
-		}
-		ch <- struct{}{}
-	}()
-	<-ch
-
+	wg.Wait()
 	c.Close() // NOTE: ignoring potential errors from input.Err()
 }
 
