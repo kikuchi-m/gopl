@@ -46,31 +46,30 @@ var (
 )
 
 func broadcaster() {
-	clients := make(map[cliName]cliChan)
+	clients := make(map[cliName]client)
 	for {
 		select {
 		case msg := <-messages:
-			for cli := range clients {
-				clients[cli] <- msg
+			for _, cli := range clients {
+				cli.ch <- msg
 			}
 
 		case cli := <-entering:
 			var sb strings.Builder
 			if len(clients) > 0 {
 				fmt.Fprint(&sb, "current clients in the room:")
-				for c := range clients {
-					fmt.Fprintf(&sb, "\n\t%s", c)
+				for _, c := range clients {
+					fmt.Fprintf(&sb, "\n\t%s", c.name)
 				}
 			} else {
 				fmt.Fprint(&sb, "no one in the room")
 			}
 			cli.ch <- sb.String()
-			clients[cli.addr] = cli.ch
+			clients[cli.addr] = cli
 
 		case cli := <-leaving:
-			ch := cli.ch
 			delete(clients, cli.addr)
-			close(ch)
+			close(cli.ch)
 		}
 	}
 }
