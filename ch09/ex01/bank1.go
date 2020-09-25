@@ -1,16 +1,23 @@
 package bank1
 
-var deposits = make(chan int)
-var done = make(chan bool)
+type req struct {
+	amount  int
+	success chan<- bool
+}
+
+var deposits = make(chan req)
 var balances = make(chan int)
 
 func Deposit(amount uint) {
-	deposits <- int(amount)
+	done := make(chan bool)
+	deposits <- req{int(amount), done}
+	// always succeed
 	<-done
 }
 
 func Withdraw(amount uint) bool {
-	deposits <- -int(amount)
+	done := make(chan bool)
+	deposits <- req{-int(amount), done}
 	return <-done
 }
 
@@ -22,13 +29,13 @@ func teller() {
 	var balance int
 	for {
 		select {
-		case amount := <-deposits:
-			balance += amount
+		case req := <-deposits:
+			balance += req.amount
 			if balance < 0 {
-				balance += -amount
-				done <- false
+				balance += -req.amount
+				req.success <- false
 			} else {
-				done <- true
+				req.success <- true
 			}
 		case balances <- balance:
 		}
