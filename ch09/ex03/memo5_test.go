@@ -12,14 +12,8 @@ import (
 	"time"
 )
 
-var cnt int = 0
-
-func httpGetBody(url string, done chan<- struct{}) (interface{}, error) {
+func httpGetBody(url string) (interface{}, error) {
 	resp, err := http.Get(url)
-	if cnt < 2 {
-		done <- struct{}{}
-	}
-	cnt++
 	if err != nil {
 		return nil, err
 	}
@@ -31,9 +25,19 @@ func Test(t *testing.T) {
 	m := New(httpGetBody)
 	defer m.Close()
 
+	cnt := 0
+
 	for url := range incomingURLs() {
 		start := time.Now()
-		value, err := m.Get(url)
+		done := make(chan struct{})
+		if cnt < 2 {
+			go func() {
+				<-time.After(10 * time.Millisecond)
+				close(done)
+			}()
+		}
+		value, err := m.Get(url, done)
+		cnt++
 		if err != nil {
 			log.Print(err)
 			continue
